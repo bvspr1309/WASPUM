@@ -23,7 +23,7 @@ def preprocess_data(stock_data):
     """
     # Placeholder for data preprocessing steps required by our model
     # Example: selecting 'Close' prices and normalizing the data
-    # processed_data = your_preprocessing_function(stock_data)
+    # processed_data = Venu_preprocessing_function(stock_data)
     
     # For now, just returning the 'Close' prices
     return stock_data['Close']
