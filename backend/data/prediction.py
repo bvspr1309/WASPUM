@@ -1,28 +1,60 @@
-from data_collector import get_stock_data, preprocess_data
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import load_model
+import mysql.connector
+from sqlalchemy import create_engine
 
-# need to mport LSTM model and any other necessary libraries
+# Define the database connection parameters
+db_params = {
+    'user': 'DBadmin',
+    'password': 'root13Musashi',
+    'host': 'localhost',
+    'database': 'waspum',
+    'port': 3306,
+}
 
-def predict_stock_price(ticker):
-    """
-    Fetches and preprocesses stock data, then uses the LSTM model to predict future prices.
+# Define the table name
+table_name = "SnP_500"
 
-    :param ticker: Ticker symbol of the stock (e.g., 'AAPL' for Apple).
-    :return: Predicted future stock prices.
-    """
-    # Fetching and preprocessing data
-    historical_data = get_stock_data(ticker)
-    processed_data = preprocess_data(historical_data)
+# Defining the number of previous days' data to consider for prediction (should match the value used in lstm_model.py)
+look_back = 180
 
-    # need to load LSTM model and make predictions
-    # model = load_model()
-    # predicted_prices = model.predict(processed_data)
+# Load the trained LSTM model
+model = load_model("lstm_model.h5")
 
-    # For demonstration, return dummy data
-    predicted_prices = [processed_data[-1] * 1.02]  # Example: Predict a 2% increase
+# Connect to the database
+db_conn = mysql.connector.connect(**db_params)
 
-    return predicted_prices
+# Retrieve the most recent data from the database
+engine = create_engine(f"mysql+mysqlconnector://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['database']}")
+query = f"SELECT * FROM {table_name} ORDER BY Date DESC LIMIT {look_back}"
+recent_data_df = pd.read_sql(query, engine)
 
-# Example usage
-ticker_symbol = "AAPL"
-predicted_prices = predict_stock_price(ticker_symbol)
-print(predicted_prices)
+# Close the database connection
+db_conn.close()
+
+# Convert the 'Date' column to datetime
+recent_data_df['Date'] = pd.to_datetime(recent_data_df['Date'])
+
+# Sort the data by date
+recent_data_df.sort_values(by='Date', inplace=True)
+recent_data_df.set_index('Date', inplace=True)
+
+# Extract the most recent 'Close' prices
+recent_close_prices = recent_data_df['Close'].values.reshape(-1, 1)
+
+# Normalize the recent data
+scaler = MinMaxScaler()
+recent_close_prices = scaler.fit_transform(recent_close_prices)
+
+# Create a sequence of data for prediction
+input_data = recent_close_prices[-look_back:].reshape(1, look_back, 1)
+
+# Make a prediction using the loaded model
+predicted_price = model.predict(input_data)
+
+# Inverse transform the predicted price to the original scale
+predicted_price = scaler.inverse_transform(predicted_price)
+
+print(f"Predicted Closing Price for the Next Day: ${predicted_price[0][0]:.2f}")
