@@ -15,10 +15,10 @@ db_params = {
 }
 
 # Define the table name
-table_name = "SnP_500"
+table_name = "tsla"
 
-# Defining the number of previous days' data to consider for prediction (should match the value used in lstm_model.py)
-look_back = 180
+# Define the number of previous days' data to consider for prediction (should match the value used in lstm_model.py)
+look_back = 1000
 
 # Load the trained LSTM model
 model = load_model("lstm_model.h5")

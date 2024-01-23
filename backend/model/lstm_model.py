@@ -18,10 +18,10 @@ db_params = {
 }
 
 # Define the table name
-table_name = "snp_500"
+table_name = "tsla"
 
 # Defining the number of previous days' data to consider for prediction
-look_back = 180
+look_back = 1000
 
 # Connect to the database
 db_conn = mysql.connector.connect(**db_params)

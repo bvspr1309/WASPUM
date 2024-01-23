@@ -53,6 +53,9 @@ def update_stock_data(tickers, data_path):
         print(f"Fetching data for {ticker}")
         data = download_stock_data(ticker)
         if not data.empty:
+            # Reformat the date column to match the desired format
+            data['Date'] = data.index.strftime('%m/%d/%Y')
+            
             csv_filename = os.path.join(data_path, f"{ticker}.csv")
             data.to_csv(csv_filename, index=False)
             print(f"Data for {ticker} saved as {csv_filename}")
@@ -75,5 +78,5 @@ tickers = get_sp500_tickers()
 # Specify the data path
 data_path = "D:/Files/Projects/Capstone/Code/Data"
 
-# Update stock data and save as CSV files
+# Update stock data and save as CSV files with the date column in the desired format
 update_stock_data(tickers, data_path)
