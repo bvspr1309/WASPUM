@@ -1,30 +1,82 @@
 import yfinance as yf
 import pandas as pd
+import os
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
 
-def get_stock_data(ticker, start_date='2000-01-01', end_date = None):
+def get_sp500_tickers():
     """
-    Fetches historical stock data from Yahoo Finance.
+    Fetches S&P 500 stock tickers from Wikipedia.
+    
+    :return: List of S&P 500 stock tickers.
+    """
+    # URL of the Wikipedia page containing the S&P 500 component list
+    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 
-    :param ticker: Ticker symbol of the stock (e.g., 'AAPL' for Apple).
-    :param start_date: Start date for historical data (default is '2000-01-01').
-    :param end_date: End date for historical data (default is None, which fetches till the current date).
-    :return: Pandas DataFrame containing the historical stock data.
+    # Send a GET request to the Wikipedia page
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        # Parse the HTML content of the page
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Find the table containing the S&P 500 component list by its class
+        table = soup.find('table', {'class': 'wikitable'})
+
+        # Initialize an empty list to store tickers
+        tickers = []
+
+        # Iterate through the rows of the table
+        for row in table.find_all('tr')[1:]:
+            # Extract the ticker symbol from the first column of each row
+            ticker = row.find_all('td')[0].text.strip()
+            tickers.append(ticker)
+
+        return tickers
+    else:
+        print("Failed to fetch S&P 500 tickers from Wikipedia.")
+        return []
+
+def update_stock_data(tickers, data_path):
     """
-    stock_data = yf.download(ticker, start=start_date, end =end_date)
+    Downloads historical stock data for a list of tickers and saves it as CSV files.
+
+    :param tickers: List of stock ticker symbols.
+    :param data_path: Path to save the CSV files.
+    """
+    # Create the data directory if it doesn't exist
+    if not os.path.exists(data_path):
+        os.makedirs(data_path)
+
+    for ticker in tickers:
+        print(f"Fetching data for {ticker}")
+        data = download_stock_data(ticker)
+        if not data.empty:
+            # Reformat the date column to match the desired format
+            data['Date'] = data.index.strftime('%m/%d/%Y')
+            
+            csv_filename = os.path.join(data_path, f"{ticker}.csv")
+            data.to_csv(csv_filename, index=False)
+            print(f"Data for {ticker} saved as {csv_filename}")
+        else:
+            print(f"No data available for {ticker}")
+
+def download_stock_data(ticker):
+    """
+    Downloads historical stock data for a given ticker.
+
+    :param ticker: Stock ticker symbol.
+    :return: Pandas DataFrame containing the stock data.
+    """
+    stock_data = yf.download(ticker)
     return stock_data
 
-def preprocess_data(stock_data):
-    """
-    Prepares the stock data for prediction. 
-    This function will be modified as per our LSTM model
+# Define the list of S&P 500 tickers
+tickers = get_sp500_tickers()
 
-    :param stock_data: DataFrame with the stock's historical data.
-    :return: Processed data ready for prediction.
-    """
-    # Placeholder for data preprocessing steps required by our model
-    # Example: selecting 'Close' prices and normalizing the data
-    # processed_data = Venu_preprocessing_function(stock_data)
-    
-    # For now, just returning the 'Close' prices
-    return stock_data['Close']
+# Specify the data path
+data_path = "D:/Files/Projects/Capstone/Code/Data"
 
+# Update stock data and save as CSV files with the date column in the desired format
+update_stock_data(tickers, data_path)
